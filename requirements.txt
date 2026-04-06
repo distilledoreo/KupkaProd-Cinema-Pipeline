@@ -1,0 +1,6 @@
+websocket-client
+ollama
+opencv-python
+Pillow
+requests
+sv_ttk
