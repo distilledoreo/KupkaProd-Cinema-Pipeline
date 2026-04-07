@@ -10,7 +10,7 @@ Give it a script, go to sleep, wake up to a movie.
 
 This entire video was generated from a prompt under 50 words. The system is fully agentic — give it as little or as much detail as you want. It writes the script, plans every scene, generates character descriptions, and produces the full video autonomously.
 
-https://github.com/user-attachments/assets/86894015-67f6-458b-b825-c700b9a95ff5
+https://github.com/Matticusnicholas/KupkaProd-Cinema-Pipeline/raw/master/naturedoc.mp4
 
 *\*Light trimming done in post-production to clean up sentence cutoffs.*
 
