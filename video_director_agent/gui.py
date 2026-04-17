@@ -49,7 +49,9 @@ class DirectorGUI:
     def _show_welcome_wizard(self, skip_to_settings=False):
         """Multi-page first-run wizard with setup instructions."""
         from tkinter import filedialog
-        from config import save_user_settings, _DEFAULTS
+        from config import save_user_settings, _DEFAULTS, _load_user_settings
+
+        current_settings = {**_DEFAULTS, **_load_user_settings()}
 
         wiz = tk.Toplevel(self.root)
         wiz.title("KupkaProd Cinema Pipeline — Setup Wizard")
@@ -158,7 +160,7 @@ class DirectorGUI:
             ttk.Label(frame, text="Step 5: Configure Paths", style="WizStep.TLabel").pack(anchor="w", pady=(0, 10))
 
             ttk.Label(frame, text="ComfyUI Root Folder:", style="Wiz.TLabel").pack(anchor="w")
-            comfy_var = tk.StringVar(value=_DEFAULTS["comfyui_root"])
+            comfy_var = tk.StringVar(value=current_settings["comfyui_root"])
             cf = ttk.Frame(frame)
             cf.pack(fill=tk.X, pady=(2, 8))
             ttk.Entry(cf, textvariable=comfy_var, width=55).pack(side=tk.LEFT, fill=tk.X, expand=True)
@@ -167,11 +169,11 @@ class DirectorGUI:
                        ).pack(side=tk.RIGHT, padx=(8, 0))
 
             ttk.Label(frame, text="ComfyUI Launch Script (filename in root):", style="Wiz.TLabel").pack(anchor="w")
-            launcher_var = tk.StringVar(value=_DEFAULTS["comfyui_launcher"])
+            launcher_var = tk.StringVar(value=current_settings["comfyui_launcher"])
             ttk.Entry(frame, textvariable=launcher_var, width=55).pack(anchor="w", pady=(2, 8))
 
             ttk.Label(frame, text="Transformers Model ID (planning + evaluation):", style="Wiz.TLabel").pack(anchor="w")
-            model_var = tk.StringVar(value=_DEFAULTS["llm_model_fast"])
+            model_var = tk.StringVar(value=current_settings["llm_model_fast"])
             ttk.Entry(frame, textvariable=model_var, width=40).pack(anchor="w", pady=(2, 8))
             ttk.Label(
                 frame,
