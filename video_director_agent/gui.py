@@ -119,11 +119,13 @@ class DirectorGUI:
                 "Make sure you have the following installed:\n\n"
                 "1. ComfyUI (v0.18 or newer)\n"
                 "   Download: github.com/comfyanonymous/ComfyUI\n\n"
-                "2. Ollama (for the AI planning/evaluation)\n"
-                "   Download: ollama.ai\n"
-                "   Then run:  ollama pull gemma4:e4b\n\n"
-                "3. Python packages:\n"
-                "   pip install websocket-client ollama opencv-python Pillow\n\n"
+                "2. Python packages for local Transformers inference:\n"
+                "   pip install -r requirements.txt\n"
+                "   (includes transformers, torch, and processor deps)\n\n"
+                "3. Hugging Face model access (first run downloads model weights)\n"
+                "   - Choose a text chat model ID for planning\n"
+                "   - Choose a vision-language model ID for evaluation\n"
+                "   - No external daemon is required\n\n"
                 "4. FFmpeg (usually bundled with ComfyUI on Windows)"
             ), style="Wiz.TLabel", justify=tk.LEFT).pack(anchor="w")
 
@@ -202,9 +204,14 @@ class DirectorGUI:
             launcher_var = tk.StringVar(value=_DEFAULTS["comfyui_launcher"])
             ttk.Entry(frame, textvariable=launcher_var, width=55).pack(anchor="w", pady=(2, 8))
 
-            ttk.Label(frame, text="Ollama Model (for planning + evaluation):", style="Wiz.TLabel").pack(anchor="w")
+            ttk.Label(frame, text="Transformers Model ID (planning + evaluation):", style="Wiz.TLabel").pack(anchor="w")
             model_var = tk.StringVar(value=_DEFAULTS["ollama_model_fast"])
             ttk.Entry(frame, textvariable=model_var, width=40).pack(anchor="w", pady=(2, 8))
+            ttk.Label(
+                frame,
+                text="Tip: enter a Hugging Face model ID. This app loads models directly via Transformers.",
+                style="Wiz.TLabel",
+            ).pack(anchor="w")
 
             # Store vars for save
             frame._settings_vars = (comfy_var, launcher_var, model_var)
