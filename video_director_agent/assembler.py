@@ -6,7 +6,7 @@ import tempfile
 import logging
 from llm_backend import get_backend
 
-from config import OLLAMA_MODEL_FAST, EVAL_TOKEN_BUDGET, FFMPEG_PATH, FFPROBE_PATH
+from config import LLM_MODEL_FAST, EVAL_TOKEN_BUDGET, FFMPEG_PATH, FFPROBE_PATH
 from evaluator import extract_frames
 
 log = logging.getLogger(__name__)
@@ -111,7 +111,7 @@ Respond ONLY with valid JSON:
     raw = backend.chat_vision(
         messages=[{"role": "user", "content": eval_prompt}],
         images=frames,
-        options={"num_predict": EVAL_TOKEN_BUDGET, "model": OLLAMA_MODEL_FAST},
+        options={"num_predict": EVAL_TOKEN_BUDGET, "model": LLM_MODEL_FAST},
     ).strip()
     try:
         start = raw.find("{")

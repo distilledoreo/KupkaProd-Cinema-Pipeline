@@ -21,8 +21,8 @@ echo   Setup complete!
 echo.
 echo   Next steps:
 echo     1. Make sure ComfyUI is installed and working
-echo     2. Make sure Ollama is installed: https://ollama.ai
-echo     3. Pull the recommended model: ollama pull gemma4:e4b
+echo     2. Open the app settings and set your Hugging Face model IDs
+echo     3. On first run, allow Transformers to download model weights
 echo     4. Run start.bat to launch the application
 echo ============================================================
 echo.

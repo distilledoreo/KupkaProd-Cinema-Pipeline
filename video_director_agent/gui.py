@@ -17,48 +17,14 @@ def slugify(text: str) -> str:
     return slug[:50].strip("_")
 
 
-def _restart_ollama(log):
-    """Kill and restart Ollama to ensure clean state."""
-    import subprocess
-    import time
-
-    log.info("Restarting Ollama...")
-    # Kill any running Ollama processes
+def _prepare_llm_runtime(log):
+    """Clear cached Transformers models so generation starts from a clean runtime state."""
     try:
-        subprocess.run(["taskkill", "/f", "/im", "ollama.exe"],
-                       capture_output=True, timeout=10)
-        # Also kill the runner process
-        subprocess.run(["taskkill", "/f", "/im", "ollama_llama_server.exe"],
-                       capture_output=True, timeout=10)
-        time.sleep(2)
+        from llm_backend import get_backend
+        get_backend().unload()
+        log.info("Transformers runtime cache cleared.")
     except Exception as e:
-        log.warning("Could not kill Ollama: %s (may not have been running)", e)
-
-    # Start Ollama serve in background
-    try:
-        subprocess.Popen(
-            ["ollama", "serve"],
-            creationflags=subprocess.CREATE_NO_WINDOW,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-    except FileNotFoundError:
-        log.warning("ollama not found on PATH, skipping restart")
-        return
-
-    # Wait for Ollama to be ready
-    import urllib.request
-    deadline = time.time() + 30
-    while time.time() < deadline:
-        try:
-            with urllib.request.urlopen("http://localhost:11434/api/tags", timeout=2) as r:
-                if r.status == 200:
-                    log.info("Ollama restarted and ready.")
-                    return
-        except Exception:
-            time.sleep(1)
-    log.warning("Ollama did not respond within 30s after restart")
-
+        log.warning("Could not clear Transformers runtime cache: %s", e)
 
 class DirectorGUI:
     def __init__(self):
@@ -205,7 +171,7 @@ class DirectorGUI:
             ttk.Entry(frame, textvariable=launcher_var, width=55).pack(anchor="w", pady=(2, 8))
 
             ttk.Label(frame, text="Transformers Model ID (planning + evaluation):", style="Wiz.TLabel").pack(anchor="w")
-            model_var = tk.StringVar(value=_DEFAULTS["ollama_model_fast"])
+            model_var = tk.StringVar(value=_DEFAULTS["llm_model_fast"])
             ttk.Entry(frame, textvariable=model_var, width=40).pack(anchor="w", pady=(2, 8))
             ttk.Label(
                 frame,
@@ -303,8 +269,8 @@ class DirectorGUI:
                         save_user_settings({
                             "comfyui_root": comfy_var.get(),
                             "comfyui_launcher": launcher_var.get(),
-                            "ollama_model_creative": model_var.get(),
-                            "ollama_model_fast": model_var.get(),
+                            "llm_model_creative": model_var.get(),
+                            "llm_model_fast": model_var.get(),
                         })
                     break
 
@@ -721,9 +687,9 @@ class DirectorGUI:
             from comfyui_client import ComfyUIClient, load_workflow_template
             from agent import preflight, run
 
-            # Restart Ollama to ensure clean state (prevents hanging on model load)
-            self.root.after(0, self._set_status, "Restarting Ollama...")
-            _restart_ollama(logging.getLogger("agent"))
+            # Restart Transformers runtime to ensure clean state (prevents hanging on model load)
+            self.root.after(0, self._set_status, "Preparing Transformers runtime...")
+            _prepare_llm_runtime(logging.getLogger("agent"))
 
             client = ComfyUIClient()
             self.root.after(0, self._set_status, "Running preflight checks...")

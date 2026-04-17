@@ -89,7 +89,7 @@ KupkaProd now uses a local HuggingFace Transformers backend for both text chat a
 3. In Settings, set your Transformers model IDs for:
    - **Creative/Text model** (scene planning + writing)
    - **Fast/Vision model** (keyframe/video evaluation)
-4. On first run, allow Transformers to download model weights from Hugging Face Hub. The app loads models directly in-process (no Ollama daemon or background service required).
+4. On first run, allow Transformers to download model weights from Hugging Face Hub. The app loads models directly in-process (no Transformers runtime daemon or background service required).
 
 #### Hardware guidance for local Transformers inference
 
@@ -331,8 +331,8 @@ All settings are in `video_director_agent/config.py` with user overrides in `use
 | `KF_HEIGHT` | 1024 | Keyframe image height (adjustable in GUI, snaps to multiples of 64) |
 | `VIDEO_WIDTH` | 1024 | Video resolution width (adjustable in GUI, snaps to multiples of 32) |
 | `VIDEO_HEIGHT` | 432 | Video resolution height (adjustable in GUI, snaps to multiples of 32) |
-| `LLM_MODEL_CREATIVE` | google/gemma-2-2b-it (example) | Creative/planning text model ID (Transformers backend; stored in `ollama_model_creative` for backward compatibility) |
-| `LLM_MODEL_FAST` | HuggingFaceM4/idefics2-8b (example) | Fast eval/vision model ID (Transformers backend; stored in `ollama_model_fast` for backward compatibility) |
+| `LLM_MODEL_CREATIVE` | google/gemma-2-2b-it (example) | Creative/planning text model ID (Transformers backend; stored in `llm_model_creative` for backward compatibility) |
+| `LLM_MODEL_FAST` | HuggingFaceM4/idefics2-8b (example) | Fast eval/vision model ID (Transformers backend; stored in `llm_model_fast` for backward compatibility) |
 
 ### Workflow Node IDs
 

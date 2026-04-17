@@ -6,7 +6,7 @@ import logging
 import cv2
 from llm_backend import get_backend
 
-from config import OLLAMA_MODEL_FAST, EVAL_FRAME_SAMPLE_RATE, EVAL_MAX_FRAMES
+from config import LLM_MODEL_FAST, EVAL_FRAME_SAMPLE_RATE, EVAL_MAX_FRAMES
 
 log = logging.getLogger(__name__)
 backend = get_backend()
@@ -121,7 +121,7 @@ Respond with valid JSON:
             "num_predict": 1024,   # More tokens for thorough reasoning
             "num_ctx": 8192,
             "temperature": 0.3,    # Low temp for consistent, analytical evaluation
-            "model": OLLAMA_MODEL_FAST,
+            "model": LLM_MODEL_FAST,
         },
     ).strip()
     try:
