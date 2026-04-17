@@ -12,7 +12,7 @@ from PIL import Image
 import torch
 from transformers import AutoModelForCausalLM, AutoModelForImageTextToText, AutoProcessor, AutoTokenizer
 
-from config import OLLAMA_MODEL_CREATIVE, OLLAMA_MODEL_FAST
+from config import LLM_MODEL_CREATIVE, LLM_MODEL_FAST
 
 log = logging.getLogger(__name__)
 
@@ -30,11 +30,11 @@ class _VisionRuntime:
 
 
 class TransformersBackend:
-    """Simple chat backend that mirrors prior ollama.chat usage."""
+    """Simple chat backend that mirrors legacy chat usage."""
 
     def __init__(self, text_model: str | None = None, vision_model: str | None = None):
-        self.default_text_model = text_model or OLLAMA_MODEL_CREATIVE
-        self.default_vision_model = vision_model or OLLAMA_MODEL_FAST
+        self.default_text_model = text_model or LLM_MODEL_CREATIVE
+        self.default_vision_model = vision_model or LLM_MODEL_FAST
         self._text_runtimes: dict[str, _TextRuntime] = {}
         self._vision_runtimes: dict[str, _VisionRuntime] = {}
 

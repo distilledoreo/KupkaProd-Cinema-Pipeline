@@ -25,7 +25,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from config import (
     COMFYUI_HOST, TAKES_PER_SCENE, OUTPUT_DIR, COMFYUI_OUTPUT_DIR,
-    OLLAMA_MODEL, LTX_FPS, COMFYUI_LAUNCHER, COMFYUI_STARTUP_TIMEOUT,
+    LLM_MODEL, LTX_FPS, COMFYUI_LAUNCHER, COMFYUI_STARTUP_TIMEOUT,
     FFMPEG_PATH, USE_KEYFRAMES,
 )
 from comfyui_client import (
@@ -88,16 +88,13 @@ def create_state(project_name: str, brief: str) -> dict:
 # ── Model Management ────────────────────────────────────────────────────���
 
 def _unload_model(log):
-    """Unload the heavy creative model from VRAM to free it for ComfyUI."""
-    from config import OLLAMA_MODEL_CREATIVE
+    """Release Transformers model weights from VRAM to free it for ComfyUI."""
     try:
-        import ollama as _ollama
-        log.info("Unloading %s from VRAM to free GPU for ComfyUI...", OLLAMA_MODEL_CREATIVE)
-        _ollama.generate(model=OLLAMA_MODEL_CREATIVE, prompt="", keep_alive=0)
-        log.info("Model unloaded.")
+        from llm_backend import get_backend
+        get_backend().unload()
+        log.info("Released Transformers models from runtime cache.")
     except Exception as e:
-        log.warning("Could not unload model: %s (not critical)", e)
-
+        log.warning("Could not release models: %s (not critical)", e)
 
 # ── Preflight Checks ──────────────────────────────────────────────────────
 
@@ -130,19 +127,10 @@ def preflight(client: ComfyUIClient, log):
     else:
         log.info("ComfyUI is running.")
 
-    # Check Ollama model
-    try:
-        import ollama as _ollama
-        models = _ollama.list()
-        model_names = [m.model for m in models.models]
-        found = any(OLLAMA_MODEL in name for name in model_names)
-        if not found:
-            raise RuntimeError(f"Ollama model '{OLLAMA_MODEL}' not found. Run: ollama pull {OLLAMA_MODEL}")
-        log.info("Ollama model '%s' is available.", OLLAMA_MODEL)
-    except RuntimeError:
-        raise
-    except Exception as e:
-        raise RuntimeError(f"Cannot connect to Ollama: {e}")
+    # Check configured Transformers model id
+    if not LLM_MODEL or not isinstance(LLM_MODEL, str):
+        raise RuntimeError("LLM_MODEL is not configured. Set a valid Hugging Face model id in settings.")
+    log.info("Using Transformers model id: %s", LLM_MODEL)
 
     # Check workflow template
     try:
@@ -483,7 +471,7 @@ def main():
     parser.add_argument("--project", "-p", help="Project name (default: auto from brief)")
     parser.add_argument("--resume", "-r", help="Resume a project by name")
     parser.add_argument("--test-scene", help="Test a single scene description")
-    parser.add_argument("--model", "-m", help="Override Ollama model")
+    parser.add_argument("--model", "-m", help="Override Transformers model id")
     parser.add_argument("--script", "-s", help="Path to a script/screenplay file to parse")
     parser.add_argument("--gui", action="store_true", help="Launch GUI mode")
     args = parser.parse_args()
@@ -497,8 +485,8 @@ def main():
     # Override model if specified
     if args.model:
         import config
-        config.OLLAMA_MODEL = args.model
-        director.OLLAMA_MODEL = args.model
+        config.LLM_MODEL = args.model
+        director.LLM_MODEL = args.model
 
     if args.test_scene:
         log = setup_logging("test_scene")

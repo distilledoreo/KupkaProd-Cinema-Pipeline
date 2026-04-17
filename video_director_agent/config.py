@@ -11,9 +11,9 @@ _DEFAULTS = {
     "comfyui_root": r"C:\ComfyUI\ComfyUI_windows_portable",
     "comfyui_host": "127.0.0.1:8188",
     "comfyui_launcher": "run_nvidia_gpu.bat",
-    "ollama_host": "http://localhost:11434",
-    "ollama_model_creative": "gemma4:26b",
-    "ollama_model_fast": "gemma4:e4b",
+    "llm_host": "http://localhost:11434",
+    "llm_model_creative": "gemma4:26b",
+    "llm_model_fast": "gemma4:e4b",
     "kf_width": 2048,
     "kf_height": 1024,
     "video_width": 1024,
@@ -78,11 +78,11 @@ for _f in _ffprobe_candidates:
         FFPROBE_PATH = _f
         break
 
-# --- Ollama / LLM ---
-OLLAMA_HOST = _get("ollama_host")
-OLLAMA_MODEL_CREATIVE = _get("ollama_model_fast")   # Using fast model for everything — 26B has JSON issues
-OLLAMA_MODEL_FAST = _get("ollama_model_fast")
-OLLAMA_MODEL = OLLAMA_MODEL_FAST
+# --- Transformers runtime / LLM ---
+LLM_HOST = _get("llm_host")
+LLM_MODEL_CREATIVE = _get("llm_model_creative")   # Using fast model for everything — 26B has JSON issues
+LLM_MODEL_FAST = _get("llm_model_fast")
+LLM_MODEL = LLM_MODEL_FAST
 
 # --- LTX-AV (video generation) ---
 LTX_FPS = 24

@@ -11,7 +11,7 @@ import base64
 from llm_backend import get_backend
 
 from config import (
-    COMFYUI_OUTPUT_DIR, OLLAMA_MODEL_FAST,
+    COMFYUI_OUTPUT_DIR, LLM_MODEL_FAST,
     KF_PROMPT_NODE_ID, KF_SEED_NODE_ID, KF_LATENT_NODE_ID,
     KF_CANDIDATES, KF_WIDTH, KF_HEIGHT, SKIP_KF_EVAL,
 )
@@ -198,7 +198,7 @@ Respond with valid JSON:
         options={
             "num_predict": 1024,
             "temperature": 0.2,  # Very analytical
-            "model": OLLAMA_MODEL_FAST,
+            "model": LLM_MODEL_FAST,
         },
     ).strip()
     try:
@@ -283,7 +283,7 @@ Respond with ONLY the rewritten prompt text, nothing else."""
 
     return backend.chat_text(
         messages=[{"role": "user", "content": rewrite_request}],
-        options={"num_predict": 2048, "temperature": 0.5, "model": OLLAMA_MODEL_FAST},
+        options={"num_predict": 2048, "temperature": 0.5, "model": LLM_MODEL_FAST},
     ).strip()
 
 

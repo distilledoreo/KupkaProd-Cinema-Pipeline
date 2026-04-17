@@ -4,7 +4,7 @@ import json
 import logging
 from llm_backend import get_backend
 
-from config import OLLAMA_MODEL_CREATIVE, SCENE_MIN_SEC, SCENE_MAX_SEC, SCENE_SWEET_SPOT_SEC
+from config import LLM_MODEL_CREATIVE, SCENE_MIN_SEC, SCENE_MAX_SEC, SCENE_SWEET_SPOT_SEC
 
 log = logging.getLogger(__name__)
 backend = get_backend()
@@ -359,7 +359,7 @@ def parse_script(script_text: str) -> list[dict]:
     log.info("Estimated speaking rate: %d WPM", wpm)
 
     raw = _chat_with_auto_tokens(
-        model=OLLAMA_MODEL_CREATIVE,
+        model=LLM_MODEL_CREATIVE,
         messages=[
             {"role": "system", "content": SCRIPT_PARSE_SYSTEM},
             {"role": "user", "content": f"Parse this script into scenes:\n\n{script_text}"},
@@ -439,7 +439,7 @@ Think step by step:
 After your thinking, output ONLY the final JSON array of scenes."""
 
     raw = _chat_with_auto_tokens(
-        model=OLLAMA_MODEL_CREATIVE,
+        model=LLM_MODEL_CREATIVE,
         messages=[
             {"role": "system", "content": BREAKDOWN_SYSTEM},
             {"role": "user", "content": planning_prompt},
@@ -502,7 +502,7 @@ You need roughly {target_dur // SCENE_SWEET_SPOT_SEC} scenes averaging {SCENE_SW
 Output the COMPLETE rewritten JSON array of ALL scenes. No preamble."""
 
         raw = _chat_with_auto_tokens(
-            model=OLLAMA_MODEL_CREATIVE,
+            model=LLM_MODEL_CREATIVE,
             messages=[
                 {"role": "system", "content": BREAKDOWN_SYSTEM},
                 {"role": "user", "content": planning_prompt},
@@ -779,7 +779,7 @@ def _parse_json(raw: str, retries: int = 2, brief: str = "") -> list[dict]:
                 {"role": "assistant", "content": raw},
                 {"role": "user", "content": 'That was not valid JSON. Respond with ONLY the JSON object: {"characters": {...}, "scenes": [...]}. No markdown fences.'},
             ],
-            options={"temperature": 0.3, "model": OLLAMA_MODEL_CREATIVE},
+            options={"temperature": 0.3, "model": LLM_MODEL_CREATIVE},
         )
         return _parse_json(repaired.strip(), retries - 1, brief)
 
@@ -894,7 +894,7 @@ def write_prompt(scene: dict, prev_scene: dict = None, brief: str = "") -> str:
             "temperature": 0.7,
             "num_predict": 3072,   # Plenty of room for rich descriptions with style + voice
             "num_ctx": 8192,
-            "model": OLLAMA_MODEL_CREATIVE,
+            "model": LLM_MODEL_CREATIVE,
         },
     ).strip()
     log.info("Wrote prompt for scene %d (%d words): %s...",
@@ -925,7 +925,7 @@ Respond with ONLY the new prompt text."""
             {"role": "system", "content": PROMPT_WRITER_SYSTEM},
             {"role": "user", "content": context},
         ],
-        options={"temperature": 0.5 + (attempt * 0.1), "model": OLLAMA_MODEL_CREATIVE},  # Increase creativity on later retries
+        options={"temperature": 0.5 + (attempt * 0.1), "model": LLM_MODEL_CREATIVE},  # Increase creativity on later retries
     ).strip()
     log.info("Retry prompt (attempt %d) for scene %d: %s...", attempt, scene["scene_number"], prompt[:80])
     return prompt
