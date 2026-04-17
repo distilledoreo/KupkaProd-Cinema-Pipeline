@@ -1,12 +1,13 @@
-# director.py — Gemma-powered scene breakdown + prompt writing via Ollama
+# director.py — Gemma-powered scene breakdown + prompt writing via Transformers backend
 
 import json
 import logging
-import ollama
+from llm_backend import get_backend
 
 from config import OLLAMA_MODEL_CREATIVE, SCENE_MIN_SEC, SCENE_MAX_SEC, SCENE_SWEET_SPOT_SEC
 
 log = logging.getLogger(__name__)
+backend = get_backend()
 
 # ── System prompts ─────────────────────────────────────────────────────────
 
@@ -316,7 +317,7 @@ def _is_script(text: str) -> bool:
 
 def _chat_with_auto_tokens(model: str, messages: list, base_options: dict,
                            start_tokens: int = 8192, max_tokens: int = 32768) -> str:
-    """Call ollama.chat with automatic token scaling on truncation.
+    """Call backend chat with automatic token scaling on truncation.
 
     Detects truncated JSON output (unbalanced brackets) and retries with
     doubled token limit until it fits or hits max_tokens.
@@ -326,8 +327,7 @@ def _chat_with_auto_tokens(model: str, messages: list, base_options: dict,
         opts = {**base_options, "num_predict": num_predict, "num_ctx": max(num_predict, 32768)}
         log.info("  LLM call: %s, num_predict=%d", model, num_predict)
 
-        response = ollama.chat(model=model, messages=messages, options=opts)
-        raw = response["message"]["content"].strip()
+        raw = backend.chat_text(messages=messages, options={**opts, "model": model}).strip()
 
         if not raw:
             log.warning("  Empty response, retrying with more tokens...")
@@ -772,17 +772,16 @@ def _parse_json(raw: str, retries: int = 2, brief: str = "") -> list[dict]:
         else:
             log.warning("JSON parse failed: %s", e)
         log.info("Retrying Gemma call...")
-        response = ollama.chat(
-            model=OLLAMA_MODEL_CREATIVE,
+        repaired = backend.chat_text(
             messages=[
                 {"role": "system", "content": BREAKDOWN_SYSTEM},
                 {"role": "user", "content": brief},
                 {"role": "assistant", "content": raw},
                 {"role": "user", "content": 'That was not valid JSON. Respond with ONLY the JSON object: {"characters": {...}, "scenes": [...]}. No markdown fences.'},
             ],
-            options={"temperature": 0.3},
+            options={"temperature": 0.3, "model": OLLAMA_MODEL_CREATIVE},
         )
-        return _parse_json(response["message"]["content"].strip(), retries - 1, brief)
+        return _parse_json(repaired.strip(), retries - 1, brief)
 
 
 # ── Prompt Writing ─────────────────────────────────────────────────────────
@@ -886,8 +885,7 @@ def write_prompt(scene: dict, prev_scene: dict = None, brief: str = "") -> str:
 - Embed all dialogue word-for-word in quotes within the action
 - 300-500 words. Be EXHAUSTIVELY descriptive. Lazy/short prompts make bad video."""
 
-    response = ollama.chat(
-        model=OLLAMA_MODEL_CREATIVE,
+    prompt = backend.chat_text(
         messages=[
             {"role": "system", "content": PROMPT_WRITER_SYSTEM},
             {"role": "user", "content": context},
@@ -896,9 +894,9 @@ def write_prompt(scene: dict, prev_scene: dict = None, brief: str = "") -> str:
             "temperature": 0.7,
             "num_predict": 3072,   # Plenty of room for rich descriptions with style + voice
             "num_ctx": 8192,
+            "model": OLLAMA_MODEL_CREATIVE,
         },
-    )
-    prompt = response["message"]["content"].strip()
+    ).strip()
     log.info("Wrote prompt for scene %d (%d words): %s...",
              scene["scene_number"], len(prompt.split()), prompt[:100])
     return prompt
@@ -922,14 +920,12 @@ Attempt number: {attempt} of 3
 Write a NEW LTX 2.3 prompt for this scene that addresses the failure.
 Respond with ONLY the new prompt text."""
 
-    response = ollama.chat(
-        model=OLLAMA_MODEL_CREATIVE,
+    prompt = backend.chat_text(
         messages=[
             {"role": "system", "content": PROMPT_WRITER_SYSTEM},
             {"role": "user", "content": context},
         ],
-        options={"temperature": 0.5 + (attempt * 0.1)},  # Increase creativity on later retries
-    )
-    prompt = response["message"]["content"].strip()
+        options={"temperature": 0.5 + (attempt * 0.1), "model": OLLAMA_MODEL_CREATIVE},  # Increase creativity on later retries
+    ).strip()
     log.info("Retry prompt (attempt %d) for scene %d: %s...", attempt, scene["scene_number"], prompt[:80])
     return prompt

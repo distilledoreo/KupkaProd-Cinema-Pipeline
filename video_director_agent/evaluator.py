@@ -4,11 +4,12 @@ import base64
 import json
 import logging
 import cv2
-import ollama
+from llm_backend import get_backend
 
 from config import OLLAMA_MODEL_FAST, EVAL_FRAME_SAMPLE_RATE, EVAL_MAX_FRAMES
 
 log = logging.getLogger(__name__)
+backend = get_backend()
 
 
 def extract_frames(video_path: str, fps_sample: int = EVAL_FRAME_SAMPLE_RATE) -> list[str]:
@@ -113,17 +114,16 @@ Respond with valid JSON:
 "retry_suggestion": "specific changes to make in the prompt to fix the issue, or null if PASS"}}"""
 
     log.info("Evaluating scene %d (%d frames, strict mode)...", scene["scene_number"], len(frames))
-    response = ollama.chat(
-        model=OLLAMA_MODEL_FAST,
-        messages=[{"role": "user", "content": eval_prompt, "images": frames}],
+    raw = backend.chat_vision(
+        messages=[{"role": "user", "content": eval_prompt}],
+        images=frames,
         options={
             "num_predict": 1024,   # More tokens for thorough reasoning
             "num_ctx": 8192,
             "temperature": 0.3,    # Low temp for consistent, analytical evaluation
+            "model": OLLAMA_MODEL_FAST,
         },
-    )
-
-    raw = response["message"]["content"].strip()
+    ).strip()
     try:
         result = _parse_eval_json(raw)
     except (ValueError, json.JSONDecodeError):

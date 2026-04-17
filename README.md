@@ -20,7 +20,7 @@ https://github.com/Matticusnicholas/KupkaProd-Cinema-Pipeline/raw/master/natured
 
 KupkaProd Cinema Pipeline is a Python application that orchestrates multiple AI models to produce videos from text. It works like a miniature production studio:
 
-1. **Script Analysis** — A local LLM (Gemma via Ollama) reads your prompt or screenplay, breaks it into scenes, writes detailed character descriptions, plans camera angles, lighting, and dialogue timing
+1. **Script Analysis** — A local LLM (Gemma or another HuggingFace Transformers chat model) reads your prompt or screenplay, breaks it into scenes, writes detailed character descriptions, plans camera angles, lighting, and dialogue timing
 2. **Storyboarding** — Generates keyframe images for every scene using Z-Image Turbo, then lets you review and approve them before committing to expensive video generation
 3. **Video Production** — Generates multiple takes of each scene through ComfyUI's LTX-AV pipeline (synchronized audio + video), with different seeds for variety
 4. **Editing** — A built-in take reviewer lets you watch each take, pick your favorites scene-by-scene, and assemble the final film with one click
@@ -41,8 +41,8 @@ The entire pipeline runs on your local machine. No API keys, no cloud compute, n
 - **Adjustable Scene Duration** — Set min/max scene length from the GUI (default 2-30 seconds)
 - **Full World Reconstruction** — Every prompt rebuilds the entire scene from scratch (character, setting, lighting, camera) because the video model has no memory between scenes
 - **Resume Support** — State saved after every step. Crash overnight? Resume from where you left off
-- **Auto-Launch** — Starts ComfyUI automatically if it's not running. Auto-restarts Ollama on each production run to prevent hangs
-- **Configurable LLM** — Uses Gemma 4 E4B by default. Supports any Ollama model — swap in Qwen, Mistral, or whatever you prefer in Settings
+- **Auto-Launch** — Starts ComfyUI automatically if it's not running
+- **Configurable LLM** — Supports local HuggingFace Transformers text/vision chat models (set your model IDs in Settings)
 - **Modern Dark UI** — Windows 11-style dark theme via Sun Valley (falls back gracefully if not installed)
 - **Open Source Portable** — First-run setup wizard. No hardcoded paths
 
@@ -55,7 +55,6 @@ The entire pipeline runs on your local machine. No API keys, no cloud compute, n
 - **Storage**: ~50GB for AI models
 - **Python**: 3.10 or newer
 - **ComfyUI**: Installed and working ([download here](https://github.com/comfyanonymous/ComfyUI))
-- **Ollama**: Installed ([download here](https://ollama.ai/))
 
 ---
 
@@ -79,16 +78,17 @@ Or run this yourself:
 pip install -r requirements.txt
 ```
 
-### Step 3: Install Ollama and the AI Brain
+### Step 3: Configure the Transformers LLM backend
 
-KupkaProd uses a local AI model to write scripts, plan scenes, and direct your movie. Here's how to set that up:
+KupkaProd now uses a local HuggingFace Transformers backend for both text chat and vision chat tasks.
 
-1. Download and install Ollama from [ollama.ai](https://ollama.ai/)
-2. Open a terminal and pull the model:
-```bash
-ollama pull gemma4:e4b
-```
-This downloads Gemma 4 (~5GB). It's the brain that writes all the scene descriptions and dialogue.
+1. Install dependencies (`transformers` + `torch`) via `pip install -r requirements.txt`
+2. Pick model IDs that support:
+   - Text chat (`AutoTokenizer` + `AutoModelForCausalLM`)
+   - Vision chat (`AutoProcessor` + image-text model) for evaluator/keyframe modules
+3. In Settings, set the model fields to your local/available HuggingFace model IDs
+
+> Note: the setting labels still use legacy `ollama_*` names in `user_settings.json`, but they are now read as Transformers model IDs.
 
 ### Step 4: Download the Video and Image Models for ComfyUI
 
@@ -190,7 +190,7 @@ python video_director_agent/gui.py
 On first launch, a setup dialog asks for:
 - **ComfyUI root folder** — where ComfyUI is installed (e.g. `C:\ComfyUI\ComfyUI_windows_portable`)
 - **Launch script** — the `.bat` file you normally use to start ComfyUI
-- **LLM models** — which Ollama models to use (the defaults are fine)
+- **LLM models** — HuggingFace model IDs for creative/text and fast/vision calls
 
 These settings are saved and can be changed anytime via the Settings button.
 
@@ -212,7 +212,7 @@ Go get coffee. Come back to a movie.
 [Your Script/Prompt]
         |
         v
-PHASE 1: SCENE BREAKDOWN (Gemma via Ollama)
+PHASE 1: SCENE BREAKDOWN (Transformers backend)
   - Parse script or generate scenes from prompt
   - Write character descriptions (50-80 words each)
   - Plan settings, lighting, camera angles per scene
@@ -323,8 +323,8 @@ All settings are in `video_director_agent/config.py` with user overrides in `use
 | `KF_HEIGHT` | 1024 | Keyframe image height (adjustable in GUI, snaps to multiples of 64) |
 | `VIDEO_WIDTH` | 1024 | Video resolution width (adjustable in GUI, snaps to multiples of 32) |
 | `VIDEO_HEIGHT` | 432 | Video resolution height (adjustable in GUI, snaps to multiples of 32) |
-| `OLLAMA_MODEL_CREATIVE` | gemma4:e4b | Model for planning/writing (configurable in Settings) |
-| `OLLAMA_MODEL_FAST` | gemma4:e4b | Model for evaluation (configurable in Settings) |
+| `OLLAMA_MODEL_CREATIVE` | google/gemma-2-2b-it (example) | Creative/planning text model ID (Transformers) |
+| `OLLAMA_MODEL_FAST` | HuggingFaceM4/idefics2-8b (example) | Fast eval/vision model ID (Transformers) |
 
 ### Workflow Node IDs
 
@@ -339,9 +339,9 @@ If you're using a custom workflow and auto-detection isn't finding the right nod
 - **Start small** — Test with a 1-minute video first before attempting a 30-minute film
 - **Fast iteration** — Set takes to 1 and enable T2V Only mode to skip keyframes. Great for testing prompts
 - **Overnight runs** — Crank takes to 5-10 for maximum variety. Long productions (10+ minutes) can take hours. The resume system handles crashes
-- **Model swapping** — If Gemma 26B is too slow, use `gemma4:e4b` for both creative and eval. Quality will be lower but it's much faster
+- **Model swapping** — If your main model is too slow, choose a smaller Transformers model ID for both creative and eval calls
 - **Resolution** — Image dimensions must be divisible by 64, video by 32. The GUI sliders snap automatically
-- **VRAM management** — The agent automatically unloads the heavy LLM and restarts Ollama before starting ComfyUI generation
+- **VRAM management** — The backend can unload model weights between phases before ComfyUI generation
 
 ---
 
@@ -372,7 +372,7 @@ Commercial use requires a separate license. Contact **matt.kupka@gmail.com** for
 - [ComfyUI](https://github.com/comfyanonymous/ComfyUI) — The backbone for all image/video generation
 - [LTX-Video](https://github.com/Lightricks/LTXVideo) — Text-to-video with synchronized audio
 - [Z-Image Turbo](https://github.com/Tongyi-MAI/Z-Image) — Fast image generation for storyboarding
-- [Ollama](https://ollama.ai/) — Local LLM inference
+- [Transformers](https://github.com/huggingface/transformers) — Local LLM/VLM inference
 - [Gemma](https://ai.google.dev/gemma) — Scene planning and evaluation
 
 KupkaProd Cinema Pipeline — Built with Claude Code.

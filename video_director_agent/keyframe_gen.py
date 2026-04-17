@@ -8,7 +8,7 @@ import random
 import shutil
 import base64
 
-import ollama
+from llm_backend import get_backend
 
 from config import (
     COMFYUI_OUTPUT_DIR, OLLAMA_MODEL_FAST,
@@ -17,6 +17,7 @@ from config import (
 )
 
 log = logging.getLogger(__name__)
+backend = get_backend()
 
 
 def _crop_to_video_ar(image_path: str, target_w: int = 1024, target_h: int = 432):
@@ -191,16 +192,15 @@ Respond with valid JSON:
 "fail_reason": "specific description of what's wrong, or null",
 "character_notes": "what specifically matches or doesn't match the character description"}}"""
 
-    response = ollama.chat(
-        model=OLLAMA_MODEL_FAST,
-        messages=[{"role": "user", "content": eval_prompt, "images": [img_b64]}],
+    raw = backend.chat_vision(
+        messages=[{"role": "user", "content": eval_prompt}],
+        images=[img_b64],
         options={
             "num_predict": 1024,
             "temperature": 0.2,  # Very analytical
+            "model": OLLAMA_MODEL_FAST,
         },
-    )
-
-    raw = response["message"]["content"].strip()
+    ).strip()
     try:
         # Find JSON in response
         start = raw.find("{")
@@ -281,12 +281,10 @@ Rewrite the prompt to fix these issues. Focus on:
 
 Respond with ONLY the rewritten prompt text, nothing else."""
 
-    response = ollama.chat(
-        model=OLLAMA_MODEL_FAST,
+    return backend.chat_text(
         messages=[{"role": "user", "content": rewrite_request}],
-        options={"num_predict": 2048, "temperature": 0.5},
-    )
-    return response["message"]["content"].strip()
+        options={"num_predict": 2048, "temperature": 0.5, "model": OLLAMA_MODEL_FAST},
+    ).strip()
 
 
 def _run_keyframe_round(client, template: dict, scene: dict, characters: dict,

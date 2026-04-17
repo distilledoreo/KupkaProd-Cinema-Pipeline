@@ -4,12 +4,13 @@ import os
 import subprocess
 import tempfile
 import logging
-import ollama
+from llm_backend import get_backend
 
 from config import OLLAMA_MODEL_FAST, EVAL_TOKEN_BUDGET, FFMPEG_PATH, FFPROBE_PATH
 from evaluator import extract_frames
 
 log = logging.getLogger(__name__)
+backend = get_backend()
 
 
 def concat_scenes(scene_paths: list[str], output_path: str):
@@ -107,13 +108,11 @@ Respond ONLY with valid JSON:
 "problem_scenes": [list of scene numbers that need work, or empty list]}}"""
 
     log.info("Running final continuity eval on assembled film (%d frames)...", len(frames))
-    response = ollama.chat(
-        model=OLLAMA_MODEL_FAST,
-        messages=[{"role": "user", "content": eval_prompt, "images": frames}],
-        options={"num_predict": EVAL_TOKEN_BUDGET},
-    )
-
-    raw = response["message"]["content"].strip()
+    raw = backend.chat_vision(
+        messages=[{"role": "user", "content": eval_prompt}],
+        images=frames,
+        options={"num_predict": EVAL_TOKEN_BUDGET, "model": OLLAMA_MODEL_FAST},
+    ).strip()
     try:
         start = raw.find("{")
         end = raw.rfind("}") + 1

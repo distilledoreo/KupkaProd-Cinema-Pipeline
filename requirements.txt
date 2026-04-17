@@ -4,3 +4,5 @@ opencv-python
 Pillow
 requests
 sv_ttk
+transformers
+torch
