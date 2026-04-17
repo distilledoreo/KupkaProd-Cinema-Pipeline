@@ -82,13 +82,21 @@ pip install -r requirements.txt
 
 KupkaProd now uses a local HuggingFace Transformers backend for both text chat and vision chat tasks.
 
-1. Install dependencies (`transformers` + `torch`) via `pip install -r requirements.txt`
+1. Install dependencies via `pip install -r requirements.txt` (includes `transformers`, `torch`, and common processor/runtime dependencies)
 2. Pick model IDs that support:
    - Text chat (`AutoTokenizer` + `AutoModelForCausalLM`)
    - Vision chat (`AutoProcessor` + image-text model) for evaluator/keyframe modules
-3. In Settings, set the model fields to your local/available HuggingFace model IDs
+3. In Settings, set your Transformers model IDs for:
+   - **Creative/Text model** (scene planning + writing)
+   - **Fast/Vision model** (keyframe/video evaluation)
+4. On first run, allow Transformers to download model weights from Hugging Face Hub. The app loads models directly in-process (no Ollama daemon or background service required).
 
-> Note: the setting labels still use legacy `ollama_*` names in `user_settings.json`, but they are now read as Transformers model IDs.
+#### Hardware guidance for local Transformers inference
+
+- **Baseline GPU**: 12GB VRAM minimum for smaller/quantized models
+- **Recommended GPU**: 16-24GB VRAM for smoother planning + vision evaluation on larger VLMs
+- **CPU-only fallback**: works, but generation/planning can be significantly slower
+- **Disk cache**: reserve additional space for downloaded model weights in your Hugging Face cache directory
 
 ### Step 4: Download the Video and Image Models for ComfyUI
 
@@ -190,7 +198,7 @@ python video_director_agent/gui.py
 On first launch, a setup dialog asks for:
 - **ComfyUI root folder** — where ComfyUI is installed (e.g. `C:\ComfyUI\ComfyUI_windows_portable`)
 - **Launch script** — the `.bat` file you normally use to start ComfyUI
-- **LLM models** — HuggingFace model IDs for creative/text and fast/vision calls
+- **Transformers model IDs** — HuggingFace model IDs for creative/text and fast/vision calls
 
 These settings are saved and can be changed anytime via the Settings button.
 
@@ -323,8 +331,8 @@ All settings are in `video_director_agent/config.py` with user overrides in `use
 | `KF_HEIGHT` | 1024 | Keyframe image height (adjustable in GUI, snaps to multiples of 64) |
 | `VIDEO_WIDTH` | 1024 | Video resolution width (adjustable in GUI, snaps to multiples of 32) |
 | `VIDEO_HEIGHT` | 432 | Video resolution height (adjustable in GUI, snaps to multiples of 32) |
-| `OLLAMA_MODEL_CREATIVE` | google/gemma-2-2b-it (example) | Creative/planning text model ID (Transformers) |
-| `OLLAMA_MODEL_FAST` | HuggingFaceM4/idefics2-8b (example) | Fast eval/vision model ID (Transformers) |
+| `LLM_MODEL_CREATIVE` | google/gemma-2-2b-it (example) | Creative/planning text model ID (Transformers backend; stored in `ollama_model_creative` for backward compatibility) |
+| `LLM_MODEL_FAST` | HuggingFaceM4/idefics2-8b (example) | Fast eval/vision model ID (Transformers backend; stored in `ollama_model_fast` for backward compatibility) |
 
 ### Workflow Node IDs
 
