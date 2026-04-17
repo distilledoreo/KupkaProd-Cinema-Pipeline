@@ -70,6 +70,19 @@ class TransformersBackend:
         self._vision_runtimes[model_name] = runtime
         return runtime
 
+
+    @staticmethod
+    def validate_text_model(model_name: str):
+        """Validate text model availability without loading model weights."""
+        AutoTokenizer.from_pretrained(model_name, local_files_only=True)
+
+    @staticmethod
+    def validate_vision_model(model_name: str):
+        """Validate vision model availability without loading model weights."""
+        if not model_name:
+            return
+        AutoProcessor.from_pretrained(model_name, local_files_only=True)
+
     @staticmethod
     def _max_new_tokens(options: dict) -> int:
         return int(options.get("num_predict") or options.get("max_new_tokens") or 1024)

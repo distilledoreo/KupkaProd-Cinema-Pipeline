@@ -14,6 +14,8 @@ _DEFAULTS = {
     "ollama_host": "http://localhost:11434",
     "ollama_model_creative": "gemma4:26b",
     "ollama_model_fast": "gemma4:e4b",
+    "transformers_text_model": "google/gemma-2-2b-it",
+    "transformers_vision_model": "",
     "kf_width": 2048,
     "kf_height": 1024,
     "video_width": 1024,
@@ -78,11 +80,20 @@ for _f in _ffprobe_candidates:
         FFPROBE_PATH = _f
         break
 
-# --- Ollama / LLM ---
+# --- LLM model IDs (Transformers backend, with legacy key fallbacks) ---
 OLLAMA_HOST = _get("ollama_host")
-OLLAMA_MODEL_CREATIVE = _get("ollama_model_fast")   # Using fast model for everything — 26B has JSON issues
-OLLAMA_MODEL_FAST = _get("ollama_model_fast")
-OLLAMA_MODEL = OLLAMA_MODEL_FAST
+
+_text_model = (_user.get("transformers_text_model")
+               or _user.get("ollama_model_creative")
+               or _user.get("ollama_model_fast")
+               or _DEFAULTS["transformers_text_model"])
+_vision_model = (_user.get("transformers_vision_model")
+                 or _user.get("ollama_model_fast")
+                 or "")
+
+OLLAMA_MODEL_CREATIVE = _text_model
+OLLAMA_MODEL_FAST = _vision_model or _text_model
+OLLAMA_MODEL = OLLAMA_MODEL_CREATIVE
 
 # --- LTX-AV (video generation) ---
 LTX_FPS = 24

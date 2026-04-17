@@ -17,49 +17,6 @@ def slugify(text: str) -> str:
     return slug[:50].strip("_")
 
 
-def _restart_ollama(log):
-    """Kill and restart Ollama to ensure clean state."""
-    import subprocess
-    import time
-
-    log.info("Restarting Ollama...")
-    # Kill any running Ollama processes
-    try:
-        subprocess.run(["taskkill", "/f", "/im", "ollama.exe"],
-                       capture_output=True, timeout=10)
-        # Also kill the runner process
-        subprocess.run(["taskkill", "/f", "/im", "ollama_llama_server.exe"],
-                       capture_output=True, timeout=10)
-        time.sleep(2)
-    except Exception as e:
-        log.warning("Could not kill Ollama: %s (may not have been running)", e)
-
-    # Start Ollama serve in background
-    try:
-        subprocess.Popen(
-            ["ollama", "serve"],
-            creationflags=subprocess.CREATE_NO_WINDOW,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-    except FileNotFoundError:
-        log.warning("ollama not found on PATH, skipping restart")
-        return
-
-    # Wait for Ollama to be ready
-    import urllib.request
-    deadline = time.time() + 30
-    while time.time() < deadline:
-        try:
-            with urllib.request.urlopen("http://localhost:11434/api/tags", timeout=2) as r:
-                if r.status == 200:
-                    log.info("Ollama restarted and ready.")
-                    return
-        except Exception:
-            time.sleep(1)
-    log.warning("Ollama did not respond within 30s after restart")
-
-
 class DirectorGUI:
     def __init__(self):
         self.root = tk.Tk()
@@ -119,12 +76,14 @@ class DirectorGUI:
                 "Make sure you have the following installed:\n\n"
                 "1. ComfyUI (v0.18 or newer)\n"
                 "   Download: github.com/comfyanonymous/ComfyUI\n\n"
-                "2. Ollama (for the AI planning/evaluation)\n"
-                "   Download: ollama.ai\n"
-                "   Then run:  ollama pull gemma4:e4b\n\n"
-                "3. Python packages:\n"
-                "   pip install websocket-client ollama opencv-python Pillow\n\n"
-                "4. FFmpeg (usually bundled with ComfyUI on Windows)"
+                "2. HuggingFace Transformers text model (for planning/writing)\n"
+                "   Example ID: google/gemma-2-2b-it\n"
+                "   Download to your local HF cache or local model folder.\n\n"
+                "3. Optional vision-language model (for evaluation)\n"
+                "   Leave blank in Settings to reuse the text model.\n\n"
+                "4. Python packages:\n"
+                "   pip install websocket-client transformers torch opencv-python Pillow\n\n"
+                "5. FFmpeg (usually bundled with ComfyUI on Windows)"
             ), style="Wiz.TLabel", justify=tk.LEFT).pack(anchor="w")
 
         # --- PAGE 3: ComfyUI Models ---
@@ -202,12 +161,16 @@ class DirectorGUI:
             launcher_var = tk.StringVar(value=_DEFAULTS["comfyui_launcher"])
             ttk.Entry(frame, textvariable=launcher_var, width=55).pack(anchor="w", pady=(2, 8))
 
-            ttk.Label(frame, text="Ollama Model (for planning + evaluation):", style="Wiz.TLabel").pack(anchor="w")
-            model_var = tk.StringVar(value=_DEFAULTS["ollama_model_fast"])
-            ttk.Entry(frame, textvariable=model_var, width=40).pack(anchor="w", pady=(2, 8))
+            ttk.Label(frame, text="Text Model ID / Local Path (required):", style="Wiz.TLabel").pack(anchor="w")
+            text_model_var = tk.StringVar(value=_DEFAULTS.get("transformers_text_model", _DEFAULTS["ollama_model_fast"]))
+            ttk.Entry(frame, textvariable=text_model_var, width=55).pack(anchor="w", pady=(2, 8))
+
+            ttk.Label(frame, text="Vision Model ID / Local Path (optional, leave blank to reuse text model):", style="Wiz.TLabel").pack(anchor="w")
+            vision_model_var = tk.StringVar(value=_DEFAULTS.get("transformers_vision_model", ""))
+            ttk.Entry(frame, textvariable=vision_model_var, width=55).pack(anchor="w", pady=(2, 8))
 
             # Store vars for save
-            frame._settings_vars = (comfy_var, launcher_var, model_var)
+            frame._settings_vars = (comfy_var, launcher_var, text_model_var, vision_model_var)
 
         # --- PAGE 7: Ready ---
         def page_ready(frame):
@@ -292,12 +255,17 @@ class DirectorGUI:
                         # Need to find the settings frame - check if vars exist
                         break
                     if hasattr(frame, '_settings_vars'):
-                        comfy_var, launcher_var, model_var = frame._settings_vars
+                        comfy_var, launcher_var, text_model_var, vision_model_var = frame._settings_vars
+                        text_model = text_model_var.get().strip()
+                        vision_model = vision_model_var.get().strip()
                         save_user_settings({
                             "comfyui_root": comfy_var.get(),
                             "comfyui_launcher": launcher_var.get(),
-                            "ollama_model_creative": model_var.get(),
-                            "ollama_model_fast": model_var.get(),
+                            "transformers_text_model": text_model,
+                            "transformers_vision_model": vision_model,
+                            # Legacy keys preserved for backward compatibility
+                            "ollama_model_creative": text_model,
+                            "ollama_model_fast": vision_model or text_model,
                         })
                     break
 
@@ -713,10 +681,6 @@ class DirectorGUI:
             from config import COMFYUI_HOST
             from comfyui_client import ComfyUIClient, load_workflow_template
             from agent import preflight, run
-
-            # Restart Ollama to ensure clean state (prevents hanging on model load)
-            self.root.after(0, self._set_status, "Restarting Ollama...")
-            _restart_ollama(logging.getLogger("agent"))
 
             client = ComfyUIClient()
             self.root.after(0, self._set_status, "Running preflight checks...")
