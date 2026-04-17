@@ -88,7 +88,7 @@ KupkaProd now uses a local HuggingFace Transformers backend for both text chat a
    - Vision chat (`AutoProcessor` + image-text model) for evaluator/keyframe modules
 3. In Settings, set the model fields to your local/available HuggingFace model IDs
 
-> Note: the setting labels still use legacy `ollama_*` names in `user_settings.json`, but they are now read as Transformers model IDs.
+> Settings now expose a required **Text model ID/path** and optional **Vision model ID/path**. If vision is blank, KupkaProd reuses the text model.
 
 ### Step 4: Download the Video and Image Models for ComfyUI
 
@@ -323,8 +323,8 @@ All settings are in `video_director_agent/config.py` with user overrides in `use
 | `KF_HEIGHT` | 1024 | Keyframe image height (adjustable in GUI, snaps to multiples of 64) |
 | `VIDEO_WIDTH` | 1024 | Video resolution width (adjustable in GUI, snaps to multiples of 32) |
 | `VIDEO_HEIGHT` | 432 | Video resolution height (adjustable in GUI, snaps to multiples of 32) |
-| `OLLAMA_MODEL_CREATIVE` | google/gemma-2-2b-it (example) | Creative/planning text model ID (Transformers) |
-| `OLLAMA_MODEL_FAST` | HuggingFaceM4/idefics2-8b (example) | Fast eval/vision model ID (Transformers) |
+| `transformers_text_model` | google/gemma-2-2b-it (example) | Creative/planning text model ID (Transformers) |
+| `transformers_vision_model` | HuggingFaceM4/idefics2-8b (example) | Optional eval/vision model ID (blank = reuse text model) |
 
 ### Workflow Node IDs
 

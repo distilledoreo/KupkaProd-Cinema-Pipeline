@@ -88,15 +88,21 @@ def create_state(project_name: str, brief: str) -> dict:
 # ── Model Management ────────────────────────────────────────────────────���
 
 def _unload_model(log):
-    """Unload the heavy creative model from VRAM to free it for ComfyUI."""
-    from config import OLLAMA_MODEL_CREATIVE
+    """Unload backend runtimes from VRAM to free it for ComfyUI."""
     try:
-        import ollama as _ollama
-        log.info("Unloading %s from VRAM to free GPU for ComfyUI...", OLLAMA_MODEL_CREATIVE)
-        _ollama.generate(model=OLLAMA_MODEL_CREATIVE, prompt="", keep_alive=0)
-        log.info("Model unloaded.")
+        import gc
+        import torch
+        from llm_backend import get_backend
+
+        log.info("Unloading LLM backend runtimes to free GPU for ComfyUI...")
+        get_backend().unload()
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            torch.cuda.ipc_collect()
+        log.info("LLM backend unloaded.")
     except Exception as e:
-        log.warning("Could not unload model: %s (not critical)", e)
+        log.warning("Could not unload LLM backend: %s (not critical)", e)
 
 
 # ── Preflight Checks ──────────────────────────────────────────────────────
@@ -130,19 +136,18 @@ def preflight(client: ComfyUIClient, log):
     else:
         log.info("ComfyUI is running.")
 
-    # Check Ollama model
+    # Check local Transformers model availability (lightweight tokenizer check)
     try:
-        import ollama as _ollama
-        models = _ollama.list()
-        model_names = [m.model for m in models.models]
-        found = any(OLLAMA_MODEL in name for name in model_names)
-        if not found:
-            raise RuntimeError(f"Ollama model '{OLLAMA_MODEL}' not found. Run: ollama pull {OLLAMA_MODEL}")
-        log.info("Ollama model '%s' is available.", OLLAMA_MODEL)
-    except RuntimeError:
-        raise
+        from llm_backend import get_backend
+
+        backend = get_backend()
+        backend.validate_text_model(OLLAMA_MODEL)
+        log.info("Text model '%s' is available locally.", OLLAMA_MODEL)
     except Exception as e:
-        raise RuntimeError(f"Cannot connect to Ollama: {e}")
+        raise RuntimeError(
+            f"Text model '{OLLAMA_MODEL}' is not available locally. "
+            f"Download/copy it first, then retry. Details: {e}"
+        )
 
     # Check workflow template
     try:
@@ -483,7 +488,7 @@ def main():
     parser.add_argument("--project", "-p", help="Project name (default: auto from brief)")
     parser.add_argument("--resume", "-r", help="Resume a project by name")
     parser.add_argument("--test-scene", help="Test a single scene description")
-    parser.add_argument("--model", "-m", help="Override Ollama model")
+    parser.add_argument("--model", "-m", help="Override text model ID/path")
     parser.add_argument("--script", "-s", help="Path to a script/screenplay file to parse")
     parser.add_argument("--gui", action="store_true", help="Launch GUI mode")
     args = parser.parse_args()
@@ -494,7 +499,7 @@ def main():
         app.run()
         return
 
-    # Override model if specified
+    # Override text model if specified
     if args.model:
         import config
         config.OLLAMA_MODEL = args.model
