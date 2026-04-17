@@ -200,7 +200,8 @@ On first launch, a setup dialog asks for:
 - **Launch script** — the `.bat` file you normally use to start ComfyUI
 - **Transformers model IDs** — HuggingFace model IDs for creative/text and fast/vision calls
 
-These settings are saved and can be changed anytime via the Settings button.
+These settings are saved to `video_director_agent/user_settings.json` and can be changed anytime via the **Settings** button.
+When you reopen Settings, it now loads your current saved values instead of resetting the form to defaults.
 
 ### Step 8: Make a Movie
 
